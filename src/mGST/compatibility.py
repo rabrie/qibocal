@@ -40,6 +40,7 @@ def pygsti_model_to_arrays(model,basis = 'pp'):
         return np.array(X).astype(np.complex128), E.astype(np.complex128), rho.astype(np.complex128)
     if basis == 'std':
         return pp2std(np.array(X),E,rho)
+    
 
 def average_gate_fidelities(model1,model2,pdim, basis_string = 'pp'):
     """!
@@ -65,7 +66,7 @@ def average_gate_fidelities(model1,model2,pdim, basis_string = 'pp'):
         
     """
     ent_fids = []
-    basis = pygsti.obj.Basis.cast(basis_string,pdim**2)
+    basis = pygsti.baseobjs.Basis.cast(basis_string,pdim**2)
     labels1 = [label for label in model1.__dict__['operations'].keys()]
     labels2 = [label for label in model2.__dict__['operations'].keys()]
 
@@ -132,16 +133,16 @@ def arrays_to_pygsti_model(X,E,rho, basis = 'std'): #pygsti model is by default 
     effect_label_str = ['%i'%k for k in range(E.shape[0])]
     if basis == 'std':
         X,E,rho = std2pp(X,E,rho)
-    mdl_out = pygsti.construction.build_explicit_model( 
+    mdl_out = pygsti.models.modelconstruction.create_explicit_model_from_expressions( 
         [i for i in range(int(np.log(pdim)/np.log(2)))],[Label('G%i'%i) for i in range(d)], 
         [':'.join(['I(%i)'%i for i in range(int(np.log(pdim)/np.log(2)))]) for l in range(d)],
-        effectLabels=effect_label_str)
+        effect_labels=effect_label_str)
     mdl_out['rho0'] = np.real(rho)
-    for i in range(E.shape[0]):
-        mdl_out['Mdefault']['%i'%i] = np.real(E[i])
+    mdl_out['Mdefault'].from_vector(np.real(E).reshape(-1))
     for i in range(d):
-        mdl_out[Label('G%i'%i)] = np.real(X[i].T)
+        mdl_out[Label('G%i'%i)] = np.real(X[i])
     return mdl_out
+ 
 
 def std2pp(X,E,rho):
     """!

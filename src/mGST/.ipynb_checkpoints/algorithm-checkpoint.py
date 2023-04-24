@@ -640,7 +640,7 @@ def run_mGST(*args, method = 'SFN', max_inits = 10,
                     break  
             if testing:
                 plt.semilogy(res_list)
-                plt.ylabel('Objective function')
+                plt.ylabel('Objective function for batch optimization')
                 plt.xlabel('Iterations')
                 plt.axhline(delta, color = "green", label = "conv. threshold")
                 plt.legend()
@@ -662,6 +662,13 @@ def run_mGST(*args, method = 'SFN', max_inits = 10,
             if res_list[-1] < delta:
                 success = 1
                 break
+        if testing:
+            plt.semilogy(res_list)
+            plt.ylabel('Objective function over batches and full data')
+            plt.xlabel('Iterations')
+            plt.axhline(delta, color = "green", label = "conv. threshold")
+            plt.legend()
+            plt.show()
         if success == 1:
             print('Optimization successful, improving estimate over full data....')
         else: 
@@ -672,6 +679,13 @@ def run_mGST(*args, method = 'SFN', max_inits = 10,
         res_list.append(objf(X,E,rho,J,y,d,l))
         if np.abs(res_list[-2]-res_list[-1])<delta*target_rel_prec:
             break
+    if testing:
+        plt.semilogy(res_list)
+        plt.ylabel('Objective function over batches and full data')
+        plt.xlabel('Iterations')
+        plt.axhline(delta, color = "green", label = "conv. threshold")
+        plt.legend()
+        plt.show()
     print('#################')
     if success == 1 or (res_list[-1] < delta):
         print('\t Convergence criterion satisfied')

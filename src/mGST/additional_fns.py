@@ -490,7 +490,7 @@ def MVE(X_true,E_true,rho_true,X,E,rho,d,l,n_povm,samples = 10000):
     Returns
     -------
     MVE : float
-        Mean varaition error
+        Mean variation error
 
     Notes:
         Sequences are drawn without replacement from initally d**l possibilities. 
@@ -574,7 +574,7 @@ def Kraus_rep(X,d,pdim,rK):
         The second axis enumerates Kraus operators for a gate specified by the first axis.
 
     Notes:
-        The Kraus representation is obtained from a singular value decomposition of the Choi matrix.
+        The Kraus representation is obtained from a diagonalization of the Choi matrix.
         If parameter rK is smaller than the true rank of the Choi matrix, a rank rK approximation is used. 
     """
     X_choi = X.reshape(d,pdim,pdim,pdim,pdim)
@@ -585,6 +585,7 @@ def Kraus_rep(X,d,pdim,rK):
         if np.min(w)<-1e-12:
             raise ValueError('Choi Matrix is not positive definite within tolerance 1e-12')
         K[i] = np.einsum('ijk->kji',(v[:,-rK:]@np.diag(np.sqrt(np.abs(w[-rK:])))).reshape(pdim,pdim,rK))
+        K[i] = K[i]/np.sqrt(np.einsum('ijk,ijk',K[i], K[i].conj()))*np.sqrt(pdim) #Trace normalization of Choi Matrix
     return np.array(K)
 
 
@@ -736,3 +737,34 @@ def is_positive(X,E,rho):
     print('Initial state normalization:', np.trace(rho.reshape(pdim,pdim)))
     print('POVM valid:', np.all([la.norm(np.sum(E,axis = 0).reshape(pdim,pdim) - np.eye(pdim))<1e-10, np.all(povm_eigvals.reshape(-1) > - 1e-10)]))
     return
+
+
+def tvd(X, E, rho, J, y_data):
+    """!
+
+    Returns the total variation distance between model probabilities for the circuits in J and the probabilities given by y_data.
+
+    Parameters
+    -------
+    X : numpy array
+        Gate set
+    E : numpy array
+        POVM
+    rho : numpy array
+        Initial state
+    y_data : numpy array
+        2D array of measurement outcomes for sequences in J; 
+        Each column contains the outcome probabilities for a fixed sequence
+    J : numpy array 
+        2D array where each row contains the gate indices of a gate sequence
+    bsize : int
+        Size of the batch (number of sequences)
+
+    Returns
+    -------
+    dist : float
+        The total variation distance.
+    """
+    y_model = np.real(np.array([[E[i].conj()@contract(X,j)@rho for j in J] for i in range(n_povm)]))
+    dist = la.norm(y_model - y_data, ord = 1)/2
+    return dist

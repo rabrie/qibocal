@@ -104,7 +104,8 @@ def A_SFN_riem_Hess(K,A,B,y,J,l,d,r,rK,n_povm,lam = 1e-3):
         
     Delta = tangent_proj(A,Delta_A,1,n_povm)[0]
     
-    a = minimize(lineobjf_A_geodesic, 1e-9, args=(Delta,X,A,rho,J,y), method = 'COBYLA').x
+    res = minimize(lineobjf_A_geodesic, 1e-8, args=(Delta,X,A,rho,J,y), method = 'COBYLA', options={'maxiter':200})
+    a = res.x
     A_new = update_A_geodesic(A,Delta,a)
     return A_new
 
@@ -198,7 +199,7 @@ def B_SFN_riem_Hess(K,A,B,y,J,l,d,r,rK,n_povm,lam = 1e-3):
 
     Delta = (H_abs_inv@G)[:nt]
     Delta = Delta - Y*(Y.T.conj()@Delta+Delta.T.conj()@Y)/2 #Projection onto tangent space
-    res = minimize(lineobjf_B_geodesic, 1e-9, args=(Delta,X,E,B,J,y), method = 'COBYLA', options={'maxiter':20})
+    res = minimize(lineobjf_B_geodesic, 1e-8, args=(Delta,X,E,B,J,y), method = 'COBYLA', options={'maxiter':200})
     a = res.x
     
     B_new = update_B_geodesic(B,Delta,a)
@@ -477,7 +478,7 @@ def SFN_riem_Hess_full(K,E,rho,y,J,l,d,r,rK,lam = 1e-3, ls = 'COBYLA'):
     Delta_K = ((H_abs_inv@G.reshape(-1))[:d*nt]).reshape(d,rK,pdim,pdim)
 
     Delta = tangent_proj(K,Delta_K,d,rK) #Delta_K is already in tangent space but not to sufficient numerical accuracy
-    res = minimize(lineobjf_isom_geodesic, 1e-8, args=(Delta,K,E,rho,J,y), method = ls, options={'maxiter':20})
+    res = minimize(lineobjf_isom_geodesic, 1e-8, args=(Delta,K,E,rho,J,y), method = ls, options={'maxiter':200})
     a = res.x
     K_new = update_K_geodesic(K,Delta,a)
 

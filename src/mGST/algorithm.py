@@ -98,7 +98,12 @@ def A_SFN_riem_Hess(K,A,B,y,J,l,d,r,rK,n_povm,lam = 1e-3):
     #saddle free newton method 
     H = (H + H.T.conj())/2
     evals,U = eigh(H)    
-    H_abs_inv = U@np.diag(1/(np.abs(evals) + lam))@U.T.conj()
+    #H_abs_inv = U@np.diag(1/(np.abs(evals) + lam))@U.T.conj()
+    inv_diag = evals.copy()
+    inv_diag[np.abs(evals)<1e-14] = 1
+    inv_diag = np.abs(inv_diag)
+    inv_diag[np.abs(evals)>1e-14] += lam
+    H_abs_inv = U@np.diag(1/inv_diag)@U.T.conj()    
     
     Delta_A = ((H_abs_inv@G)[:nt]).reshape(n,pdim)
         
@@ -194,8 +199,13 @@ def B_SFN_riem_Hess(K,A,B,y,J,l,d,r,rK,n_povm,lam = 1e-3):
     #saddle free newton method 
     H = (H + H.T.conj())/2
     evals,U = eigh(H)    
-    H_abs_inv = U@np.diag(1/(np.abs(evals) + lam))@U.T.conj()
-
+    #H_abs_inv = U@np.diag(1/(np.abs(evals) + lam))@U.T.conj()
+    inv_diag = evals.copy()
+    inv_diag[np.abs(evals)<1e-14] = 1
+    inv_diag = np.abs(inv_diag)
+    inv_diag[np.abs(evals)>1e-14] += lam
+    H_abs_inv = U@np.diag(1/inv_diag)@U.T.conj()
+    
     Delta = (H_abs_inv@G)[:nt]
     Delta = Delta - Y*(Y.T.conj()@Delta+Delta.T.conj()@Y)/2 #Projection onto tangent space
     res = minimize(lineobjf_B_geodesic, 1e-9, args=(Delta,X,E,B,J,y), method = 'COBYLA', options={'maxiter':20})
@@ -472,8 +482,15 @@ def SFN_riem_Hess_full(K,E,rho,y,J,l,d,r,rK,lam = 1e-3, ls = 'COBYLA'):
     
     #application of saddle free newton method
     H = (H + H.T.conj())/2
-    evals,U = eigh(H)    
-    H_abs_inv = U@np.diag(1/(np.abs(evals) + lam))@U.T.conj()
+    evals,U = eigh(H)   
+    #H_abs_inv = U@np.diag(1/(np.abs(evals) + lam))@U.T.conj()
+    
+    inv_diag = evals.copy()
+    inv_diag[np.abs(evals)<1e-14] = 1
+    inv_diag = np.abs(inv_diag)
+    inv_diag[np.abs(evals)>1e-14] += lam
+    H_abs_inv = U@np.diag(1/inv_diag)@U.T.conj()
+    
     Delta_K = ((H_abs_inv@G.reshape(-1))[:d*nt]).reshape(d,rK,pdim,pdim)
 
     Delta = tangent_proj(K,Delta_K,d,rK) #Delta_K is already in tangent space but not to sufficient numerical accuracy

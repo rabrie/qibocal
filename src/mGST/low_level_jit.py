@@ -156,7 +156,58 @@ def dK_dMdM(X,K,E,rho,J,y,l,d,r,rK):
     return dK.reshape(d,rK,pdim,pdim)*2/m/n_povm, 2*dM10/m/n_povm, 2*dM11/m/n_povm
 
 
-@njit(cache = True,parallel = True) 
+# @njit(cache = True,parallel = True) 
+# def ddM(X,K,E,rho,J,y,l,d,r,rK):
+#     pdim = int(np.sqrt(r))
+#     n_povm = y.shape[0]
+#     ddK = np.zeros((d**2,rK**2,r,r))
+#     ddK = np.ascontiguousarray(ddK.astype(np.complex128))
+#     dconjdK = np.zeros((d**2,rK**2,r,r))
+#     dconjdK = np.ascontiguousarray(ddK.astype(np.complex128))
+#     m = len(J)
+#     for k in prange(d**2):
+#         k1,k2 = local_basis(k,d,2)
+#         for n in range(m):
+#             j = J[n][J[n]>=0]
+#             for i1 in range(len(j)):
+#                 if j[i1] == k1:
+#                     for i2 in range(len(j)):
+#                         if j[i2] == k2:
+#                             L0 = contract(X,j[:min(i1,i2)])
+#                             C = contract(X,j[min(i1,i2)+1:max(i1,i2)]).reshape(pdim,pdim,pdim,pdim)
+#                             R = contract(X,j[max(i1,i2)+1:])@rho
+#                             for o in range(n_povm):
+#                                 L = E[o].conj()@L0
+#                                 if i1 == i2:
+#                                     D_ind = L@X[k1]@R-y[o,n]
+#                                 elif i1 < i2:
+#                                     D_ind = L@X[k1]@C.reshape(r,r)@X[k2]@R-y[o,n]
+#                                 elif i1 > i2:
+#                                     D_ind = L@X[k2]@C.reshape(r,r)@X[k1]@R-y[o,n]  
+
+#                                 ddK_loc = np.zeros((rK**2,r,r)).astype(np.complex128)
+#                                 dconjdK_loc = np.zeros((rK**2,r,r)).astype(np.complex128)
+#                                 for rk1 in range(rK):
+#                                     for rk2 in range(rK):
+#                                         if i1 < i2:
+#                                             ddK_loc[rk1*rK+rk2] = np.kron(L.reshape(pdim,pdim)@K[k1,rk1].conj(),R.reshape(pdim,pdim)@K[k2,rk2].T.conj())@np.ascontiguousarray(C.transpose(1,3,0,2)).reshape(r,r)
+#                                             ddK_loc[rk1*rK+rk2] = np.ascontiguousarray(ddK_loc[rk1*rK+rk2].reshape(pdim,pdim,pdim,pdim).transpose(0,3,2,1)).reshape(r,r)
+
+#                                             dconjdK_loc[rk1*rK+rk2] = np.kron(L.reshape(pdim,pdim)@K[k1,rk1].conj(),R.reshape(pdim,pdim).T@K[k2,rk2].T)@np.ascontiguousarray(C.transpose(1,2,3,0)).reshape(r,r)
+#                                             dconjdK_loc[rk1*rK+rk2] = np.ascontiguousarray(dconjdK_loc[rk1*rK+rk2].reshape(pdim,pdim,pdim,pdim).transpose(0,2,3,1)).reshape(r,r)
+#                                         elif i1 == i2:
+#                                             dconjdK_loc[rk1*rK+rk2] = np.outer(L,R)
+#                                         elif i1 > i2:
+#                                             ddK_loc[rk1*rK+rk2] = np.kron(L.reshape(pdim,pdim)@K[k2,rk2].conj(),R.reshape(pdim,pdim)@K[k1,rk1].T.conj())@np.ascontiguousarray(C.transpose(1,3,0,2)).reshape(r,r)
+#                                             ddK_loc[rk1*rK+rk2] = np.ascontiguousarray(ddK_loc[rk1*rK+rk2].reshape(pdim,pdim,pdim,pdim).transpose(3,0,1,2)).reshape(r,r)
+
+#                                             dconjdK_loc[rk1*rK+rk2] = np.kron(L.reshape(pdim,pdim).T@K[k2,rk2],R.reshape(pdim,pdim)@K[k1,rk1].T.conj())@np.ascontiguousarray(C.transpose((0,3,2,1))).reshape(r,r)
+#                                             dconjdK_loc[rk1*rK+rk2] = np.ascontiguousarray(dconjdK_loc[rk1*rK+rk2].reshape(pdim,pdim,pdim,pdim).transpose(2,0,1,3)).reshape(r,r)                                      
+#                                 ddK[k1*d + k2] += D_ind*ddK_loc
+#                                 dconjdK[k1*d + k2] += D_ind*dconjdK_loc
+#     return ddK.reshape(d,d,rK,rK,pdim,pdim,pdim,pdim)*2/m/n_povm, dconjdK.reshape(d,d,rK,rK,pdim,pdim,pdim,pdim)*2/m/n_povm
+
+@njit(cache = True)#,parallel = True) 
 def ddM(X,K,E,rho,J,y,l,d,r,rK):
     pdim = int(np.sqrt(r))
     n_povm = y.shape[0]
@@ -165,7 +216,7 @@ def ddM(X,K,E,rho,J,y,l,d,r,rK):
     dconjdK = np.zeros((d**2,rK**2,r,r))
     dconjdK = np.ascontiguousarray(ddK.astype(np.complex128))
     m = len(J)
-    for k in prange(d**2):
+    for k in range(d**2):
         k1,k2 = local_basis(k,d,2)
         for n in range(m):
             j = J[n][J[n]>=0]

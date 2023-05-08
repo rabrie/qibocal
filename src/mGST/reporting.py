@@ -7,6 +7,26 @@ import numpy.linalg as la
 import matplotlib.pyplot as plt
 import pandas as pd
 
+from matplotlib import rcParams
+import matplotlib.lines as mlines
+# rcParams.update({'figure.autolayout': True})
+plt.rc('text', usetex=True)
+plt.rc('text.latex', preamble=r'\usepackage{bm,amsmath,amssymb,lmodern}')
+plt.rcParams.update({'font.family':'computer-modern'})
+
+
+SMALL_SIZE = 8
+MEDIUM_SIZE = 9
+BIGGER_SIZE = 10
+
+plt.rc('font', size=SMALL_SIZE)          # controls default text sizes
+plt.rc('axes', titlesize=SMALL_SIZE)     # fontsize of the axes title
+plt.rc('axes', labelsize=MEDIUM_SIZE)    # fontsize of the x and y labels
+plt.rc('xtick', labelsize=SMALL_SIZE)    # fontsize of the tick labels
+plt.rc('ytick', labelsize=SMALL_SIZE)    # fontsize of the tick labels
+plt.rc('legend', fontsize=SMALL_SIZE)    # legend fontsize
+plt.rc('figure', titlesize=BIGGER_SIZE)  # fontsize of the figure title
+
 
 
 def MVE_data(X, E, rho, J, y):
@@ -39,12 +59,12 @@ def gauge_opt_report(X, E, rho, J, y, target_mdl, weights, gate_labels):
                 target_mdl,gauge_group = gaugegroup.UnitaryGaugeGroup(target_mdl.state_space, basis = 'pp'),
                 item_weights=weights)
     X_opt,E_opt,rho_opt = compatibility.pygsti_model_to_arrays(gauge_optimized_mdl,basis = 'std')    
-    
+        
     final_objf = low_level_jit.objf(X,E,rho,J,y)
     MVE = MVE_data(X,E,rho,J,y)[0]
     MVE_target = MVE_data(X_t,E_t,rho_t,J,y)[0]
     povm_td = rptbl.povm_jtrace_diff(target_mdl, gauge_optimized_mdl, 'Mdefault')
-    rho_td = la.norm(rho_opt-rho_t,ord = 1)/2
+    rho_td = la.norm(rho_opt.reshape((pdim,pdim))-rho_t.reshape((pdim,pdim)),ord = 'nuc')/2
     F_avg = compatibility.average_gate_fidelities(gauge_optimized_mdl,target_mdl,pdim, basis_string = 'pp')
     DD = compatibility.diamond_dists(gauge_optimized_mdl,target_mdl,pdim, basis_string = 'pp')
     
@@ -89,11 +109,10 @@ def set_size(w,h, ax=None):
     figh = float(h)/(t-b)
     ax.figure.set_size_inches(figw, figh)
     
-def plot_diff(mat1, mat2):
+def plot_diff_gate(mat1, mat2):
     dim = mat1.shape[0]
     fig, axes = plt.subplots(ncols=2, nrows = 1,gridspec_kw={"width_ratios":[1,1]}, sharex=True)
-    gate_index = 2
-    plt.rc('image', cmap='RdBu')
+    plt.rc('image', cmap='seismic')
     ax = axes[0]
     im0 = ax.imshow(np.real(mat1), vmin = -1, vmax = 1) #change_basis(S_true_maps[0],'std','pp')
     ax.set_xticks(np.arange(dim))
@@ -124,5 +143,41 @@ def plot_diff(mat1, mat2):
     fig.subplots_adjust(left = 0.05, right = .7, top = 1, bottom = -.1)
 
     set_size(np.sqrt(3*dim),np.sqrt(dim)*1.2)
+
+    plt.show()
+    
+def plot_spam(rho, E):
+    r = rho.shape[0]
+    n_povm = E.shape[0]
+    fig, axes = plt.subplots(ncols = 1, nrows=n_povm+1, sharex=True)
+    plt.rc('image', cmap='seismic')
+    
+    ax = axes[0]
+    im0 = ax.imshow(np.real(rho).reshape(1,r), vmin = -1, vmax = 1) #change_basis(S_true_maps[0],'std','pp')
+    ax.set_xticks(np.arange(dim))
+    ax.set_xticklabels(np.arange(dim)+1)
+    # ax.grid(visible = 'True', alpha = 0.4)
+    # ax.tick_params(top=True, labeltop=True, bottom=False, labelbottom=False)
+    #ax.set_title(r'$\rho$')
+    #ax.grid(visible = 'True', alpha = 0.4)
+
+    for i in range(n_povm): 
+        ax = axes[1+i]
+        ax.imshow(np.real(E[i].reshape(1,r)), vmin = -1, vmax = 1) #change_basis(S_true_maps[0],'std','pp')
+        # ax.set_yticks(np.arange(dim))
+        # ax.set_yticklabels(np.arange(dim)+1)
+        # ax.tick_params(top=True, labeltop=True, bottom=False, labelbottom=False)
+        #ax.set_title(r'POVM-element%i'%(i+1))
+        #ax.grid(visible = 'True', alpha = 0.4)
+    cax = fig.add_axes([ax.get_position().x1+0.05,ax.get_position().y0-0.05,0.02,ax.get_position().height])
+    fig.colorbar(im0, cax=cax)
+    
+#     cbar = fig.colorbar(im0, ax=axes.ravel().tolist(), pad = 0.1)
+#     cbar.ax.set_ylabel(r'Matrix \, entry $\times 10$', labelpad = 5, rotation=90)
+
+
+#     fig.subplots_adjust(left = 0.05, right = .7, top = 1, bottom = -.1)
+
+    #set_size(6,6)
 
     plt.show()

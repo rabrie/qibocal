@@ -8,7 +8,8 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 from matplotlib import rcParams
-import matplotlib.lines as mlines
+import matplotlib.ticker as ticker
+
 # rcParams.update({'figure.autolayout': True})
 plt.rc('text', usetex=True)
 plt.rc('text.latex', preamble=r'\usepackage{bm,amsmath,amssymb,lmodern}')
@@ -49,7 +50,7 @@ def MVE_data(X, E, rho, J, y):
     return dist/m, max_dist
 
 
-def gauge_opt_report(X, E, rho, J, y, target_mdl, weights, gate_labels):
+def gauge_opt(X, E, rho, target_mdl, weights):
     pdim = int(np.sqrt(rho.shape[0]))
     mdl = compatibility.arrays_to_pygsti_model(X,E,rho, basis = 'std')
     X_t,E_t,rho_t = compatibility.pygsti_model_to_arrays(target_mdl,basis = 'std')
@@ -58,13 +59,20 @@ def gauge_opt_report(X, E, rho, J, y, target_mdl, weights, gate_labels):
     gauge_optimized_mdl = gaugeopt_to_target(mdl, 
                 target_mdl,gauge_group = gaugegroup.UnitaryGaugeGroup(target_mdl.state_space, basis = 'pp'),
                 item_weights=weights)
-    X_opt,E_opt,rho_opt = compatibility.pygsti_model_to_arrays(gauge_optimized_mdl,basis = 'std')    
+    return compatibility.pygsti_model_to_arrays(gauge_optimized_mdl,basis = 'std')  
+
+def report(X, E, rho, J, y, target_mdl, gate_labels):
+    pdim = int(np.sqrt(rho.shape[0]))
+    X_t,E_t,rho_t = compatibility.pygsti_model_to_arrays(target_mdl,basis = 'std')
+    target_mdl = compatibility.arrays_to_pygsti_model(X_t,E_t,rho_t, basis = 'std') #For consistent gate labels
+
+    gauge_optimized_mdl = compatibility.arrays_to_pygsti_model(X,E,rho, basis = 'std')
         
     final_objf = low_level_jit.objf(X,E,rho,J,y)
     MVE = MVE_data(X,E,rho,J,y)[0]
     MVE_target = MVE_data(X_t,E_t,rho_t,J,y)[0]
     povm_td = rptbl.povm_jtrace_diff(target_mdl, gauge_optimized_mdl, 'Mdefault')
-    rho_td = la.norm(rho_opt.reshape((pdim,pdim))-rho_t.reshape((pdim,pdim)),ord = 'nuc')/2
+    rho_td = la.norm(rho.reshape((pdim,pdim))-rho_t.reshape((pdim,pdim)),ord = 'nuc')/2
     F_avg = compatibility.average_gate_fidelities(gauge_optimized_mdl,target_mdl,pdim, basis_string = 'pp')
     DD = compatibility.diamond_dists(gauge_optimized_mdl,target_mdl,pdim, basis_string = 'pp')
     
@@ -96,7 +104,7 @@ def gauge_opt_report(X, E, rho, J, y, target_mdl, weights, gate_labels):
     {'selector': 'th.col_heading.level0', 'props': 'font-size: 1em;'},
     {'selector': 'td', 'props': 'text-align: center'},
     ], overwrite=False)
-    return df_g, df_o, s_g, s_o, gauge_optimized_mdl
+    return df_g, df_o, s_g, s_o
 
 def set_size(w,h, ax=None):
     """ w, h: width, height in inches """
@@ -109,10 +117,10 @@ def set_size(w,h, ax=None):
     figh = float(h)/(t-b)
     ax.figure.set_size_inches(figw, figh)
     
-def plot_diff_gate(mat1, mat2):
+def plot_mat(mat1, mat2):
     dim = mat1.shape[0]
     fig, axes = plt.subplots(ncols=2, nrows = 1,gridspec_kw={"width_ratios":[1,1]}, sharex=True)
-    plt.rc('image', cmap='seismic')
+    plt.rc('image', cmap='RdBu')
     ax = axes[0]
     im0 = ax.imshow(np.real(mat1), vmin = -1, vmax = 1) #change_basis(S_true_maps[0],'std','pp')
     ax.set_xticks(np.arange(dim))
@@ -123,7 +131,7 @@ def plot_diff_gate(mat1, mat2):
     ax.tick_params(top=True, labeltop=True, bottom=False, labelbottom=False)
 
     ax = axes[1]
-    im1 = ax.imshow(np.real(mat1-mat2), vmin = -1, vmax = 1) #change_basis(S_true_maps[0],'std','pp')
+    im1 = ax.imshow(np.real(mat2), vmin = -1, vmax = 1) #change_basis(S_true_maps[0],'std','pp')
     ax.set_xticks(np.arange(dim))
     ax.set_xticklabels(np.arange(dim)+1)
     ax.set_yticks(np.arange(dim))
@@ -150,34 +158,28 @@ def plot_spam(rho, E):
     r = rho.shape[0]
     n_povm = E.shape[0]
     fig, axes = plt.subplots(ncols = 1, nrows=n_povm+1, sharex=True)
-    plt.rc('image', cmap='seismic')
+    plt.rc('image', cmap='RdBu')
     
     ax = axes[0]
     im0 = ax.imshow(np.real(rho).reshape(1,r), vmin = -1, vmax = 1) #change_basis(S_true_maps[0],'std','pp')
-    ax.set_xticks(np.arange(dim))
-    ax.set_xticklabels(np.arange(dim)+1)
-    # ax.grid(visible = 'True', alpha = 0.4)
-    # ax.tick_params(top=True, labeltop=True, bottom=False, labelbottom=False)
-    #ax.set_title(r'$\rho$')
-    #ax.grid(visible = 'True', alpha = 0.4)
-
+    ax.set_xticks(np.arange(r))
+    ax.set_title(r'$\rho$')
+    ax.yaxis.set_major_locator(ticker.NullLocator())
+    
     for i in range(n_povm): 
         ax = axes[1+i]
         ax.imshow(np.real(E[i].reshape(1,r)), vmin = -1, vmax = 1) #change_basis(S_true_maps[0],'std','pp')
-        # ax.set_yticks(np.arange(dim))
-        # ax.set_yticklabels(np.arange(dim)+1)
-        # ax.tick_params(top=True, labeltop=True, bottom=False, labelbottom=False)
-        #ax.set_title(r'POVM-element%i'%(i+1))
-        #ax.grid(visible = 'True', alpha = 0.4)
-    cax = fig.add_axes([ax.get_position().x1+0.05,ax.get_position().y0-0.05,0.02,ax.get_position().height])
-    fig.colorbar(im0, cax=cax)
+        ax.set_xticks(np.arange(r))
+        ax.set_xticklabels(np.arange(r)+1)
+        ax.set_title(r'POVM-Element %i'%(i+1))
+        ax.yaxis.set_major_locator(ticker.NullLocator())
+
+#     cax = fig.add_axes([axes[0].get_position().x1+0.05,ax.get_position().y0-0.05,0.02,10*ax.get_position().height])
+#     fig.colorbar(im0, cax=cax)
     
-#     cbar = fig.colorbar(im0, ax=axes.ravel().tolist(), pad = 0.1)
-#     cbar.ax.set_ylabel(r'Matrix \, entry $\times 10$', labelpad = 5, rotation=90)
+    cbar = fig.colorbar(im0, ax=axes.ravel().tolist(), pad = 0.1)
+    cbar.ax.set_ylabel(r'Pauli basis coefficient', labelpad = 5, rotation=90)
 
-
-#     fig.subplots_adjust(left = 0.05, right = .7, top = 1, bottom = -.1)
-
-    #set_size(6,6)
-
+    #fig.subplots_adjust(left = 0.05, right = .7, top = 1, bottom = -.1)
+    #set_size(5,4)
     plt.show()

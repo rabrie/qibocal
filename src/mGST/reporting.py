@@ -140,7 +140,7 @@ def plot_mat(mat1, mat2):
 
     ax.grid(visible = 'True', alpha = 0.4)
     axes[0].set_title(r'GST result')
-    axes[1].set_title(r'Diff. to ideal')
+    axes[1].set_title(r'Ideal gate')
 
     # cax = fig.add_axes([ax.get_position().x1+0.05,ax.get_position().y0-0.05,0.02,ax.get_position().height])
     #fig.colorbar(im1, cax=cax)

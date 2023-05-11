@@ -181,5 +181,5 @@ def plot_spam(rho, E):
     cbar.ax.set_ylabel(r'Pauli basis coefficient', labelpad = 5, rotation=90)
 
     #fig.subplots_adjust(left = 0.05, right = .7, top = 1, bottom = -.1)
-    #set_size(5,4)
+    set_size(4,3)
     plt.show()

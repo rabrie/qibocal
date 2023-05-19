@@ -5,6 +5,7 @@ from pygsti.models import gaugegroup
 import numpy as np
 import numpy.linalg as la
 import matplotlib.pyplot as plt
+from scipy.optimize import linear_sum_assignment
 import pandas as pd
 
 from matplotlib import rcParams
@@ -28,6 +29,15 @@ plt.rc('ytick', labelsize=SMALL_SIZE)    # fontsize of the tick labels
 plt.rc('legend', fontsize=SMALL_SIZE)    # legend fontsize
 plt.rc('figure', titlesize=BIGGER_SIZE)  # fontsize of the figure title
 
+
+def min_spectral_distance(X1,X2):
+    r = X1.shape[0]
+    eigs = la.eig(X1)[0]
+    eigs_t = la.eig(X2)[0]
+    cost_matrix = np.array([[np.abs(eigs[i] - eigs_t[j]) for i in range(r)] for j in range(r)])
+    row_ind, col_ind = linear_sum_assignment(cost_matrix)
+    normalization = np.abs(eigs).sum()
+    return cost_matrix[row_ind,col_ind].sum()/normalization
 
 
 def MVE_data(X, E, rho, J, y):
@@ -75,11 +85,13 @@ def report(X, E, rho, J, y, target_mdl, gate_labels):
     rho_td = la.norm(rho.reshape((pdim,pdim))-rho_t.reshape((pdim,pdim)),ord = 'nuc')/2
     F_avg = compatibility.average_gate_fidelities(gauge_optimized_mdl,target_mdl,pdim, basis_string = 'pp')
     DD = compatibility.diamond_dists(gauge_optimized_mdl,target_mdl,pdim, basis_string = 'pp')
+    min_spectral_dists = [min_spectral_distance(X[i],X_t[i]) for i in range(X.shape[0])]
     
 
     df_g = pd.DataFrame({
         "F_avg":F_avg,
-        "Diamond distances": DD
+        "Diamond distances": DD,
+        "Min. Spectral distances": min_spectral_dists
     })
     df_o = pd.DataFrame({
         "Final cost function value": final_objf,

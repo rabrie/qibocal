@@ -195,3 +195,4 @@ def plot_spam(rho, E):
     #fig.subplots_adjust(left = 0.05, right = .7, top = 1, bottom = -.1)
     set_size(4,3)
     plt.show()
+    return im0

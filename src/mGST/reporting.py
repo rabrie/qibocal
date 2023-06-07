@@ -165,6 +165,7 @@ def plot_mat(mat1, mat2):
     set_size(np.sqrt(3*dim),np.sqrt(dim)*1.2)
 
     plt.show()
+    return im0, im1
     
 def plot_spam(rho, E):
     r = rho.shape[0]
